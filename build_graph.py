@@ -1,218 +1,267 @@
-import wikipediaapi
 import networkx as nx
-import asyncio
-import aiohttp
-from collections import deque
-import nest_asyncio
 import requests
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from categorize_graph import categorize_graph
-
-
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import urllib.parse
+import wikipediaapi
+import os
+import pickle as pkl
+import concurrent.futures
 
 # Define the blacklist substrings
-blacklist_substrings = {'Wikipedia', 'Category', 'identifier', 'Help', 'Template', ':', 'Wayback'}  # Add actual blacklisted substrings here
+substring_to_remove_links = np.array(['Wikipedia', 'Category', 'identifier', 'Help', 'Template', ':', 'Wayback', 'ISBN'])
+substring_to_remove_categories = np.array(['Wiki', 'CS1', 'Articles', 'Pages', 'redirects', 'template', 'disputes', 'ISO'])
 
-def is_blacklisted(page_name, blacklist_substrings):
-    return any(substring in page_name for substring in blacklist_substrings)
+wiki_wiki = wikipediaapi.Wikipedia('Missing Knowledge Links', 'en')
 
-def get_wikipedia_links(session, title):
-    """Fetches the links for a given Wikipedia page title using the Wikipedia API."""
-    url = f"https://en.wikipedia.org/w/api.php"
-    params = {
-        'action': 'query',
-        'format': 'json',
-        'prop': 'links',
-        'titles': title,
-        'pllimit': 'max'  # Get maximum number of links
-    }
-    response = session.get(url, params=params)
+def fetch_links(start_pages):
+    # URL-encode each page title
+    encoded_titles = [urllib.parse.quote(title) for title in start_pages]
+    # Join the encoded titles with the pipe character
+    titles = "|".join(encoded_titles)
+    url = f'https://en.wikipedia.org/w/api.php?action=query&titles={titles}&prop=links&pllimit=max&format=json'
+    print('url: ', url)
+    response = requests.get(url)
     data = response.json()
+
+    print(data)
+    all_links = {}
+
     pages = data['query']['pages']
-    links = []
-
+    print('Pages: ', pages)
+    
     for page_id in pages:
+        print('')
+        print('Page ID: ', page_id)
+        page_title = str(pages[page_id]['title'])
+        print('Page Title: ', page_title)
+
         if 'links' in pages[page_id]:
-            links.extend([link['title'] for link in pages[page_id]['links']])
+            print('Links: ', pages[page_id]['links'])
 
-    return links
+            # make a dataframe from the links
+            links_df = pd.DataFrame(pages[page_id]['links'])
 
-def build_wikipedia_graph(start_page, depth, verbosity):
-    """Builds a Wikipedia graph starting from a given page using BFS up to a specified depth."""
-    # Initialize the graph
+            print('Links DF: ', links_df)
+            
+            # take the title column into an array
+            links = np.array(links_df['title'], dtype=str)
+
+            # create a mask
+            mask = np.zeros(len(links), dtype=bool)
+
+            # iterate over the blacklist substrings
+            for substring in blacklist_substrings:
+                current_mask = np.char.find(links, substring) != -1
+                mask |= current_mask
+
+            # Filter the array using the combined mask
+            filtered_array = links[~mask]
+
+            # add the filtered array to the links dictionary
+            print('page_title: ', page_title)
+
+            all_links[page_title] = filtered_array
+
+    return all_links
+
+
+def fetch_links_api(page_title, get_categories=True):
+
+    page = wiki_wiki.page(page_title)
+    links = page.links
+    
+    # make an array of the keys of the links dictionary
+    link_titles = np.array(list(links.keys()), dtype=str)
+
+    # create a mask
+    link_mask = np.zeros(len(link_titles), dtype=bool)
+
+    # Create a 2D array where each row corresponds to a link and each column to a substring check
+    contains_substring = np.array([np.char.find(link_titles, substring) != -1 for substring in substring_to_remove_links])
+
+    # Combine the results across all substrings to create a final mask
+    link_mask = np.any(contains_substring, axis=0)
+
+    # Filter the array using the combined mask
+    filtered_links_array = link_titles[~link_mask]
+
+    if not get_categories:
+        return filtered_links_array
+    
+    categories = page.categories
+
+    # make an array of the keys of the categories dictionary
+    category_titles = np.array(list(categories.keys()), dtype=str)
+
+    # remove 'Category:' from the category titles
+    category_titles = np.char.replace(category_titles, 'Category:', '')
+
+    # create a 2D array where each row corresponds to a category and each column to a substring check
+    contains_substring = np.array([np.char.find(category_titles, substring) != -1 for substring in substring_to_remove_categories])
+
+    # Combine the results across all substrings to create a final mask
+    category_mask = np.any(contains_substring, axis=0)
+
+    # Filter the array using the combined mask
+    filtered_categories_array = category_titles[category_mask]
+
+    return filtered_links_array, filtered_categories_array
+
+
+def build_wikipedia_graph(start_page, depth, verbosity=0):
+    """Build an undirected graph of Wikipedia pages up to a certain depth."""
     G = nx.Graph()
+    G.add_node(start_page)
+
+    to_visit = {0: [start_page]}
+
+    # create a list in the dictionary for each depth
+    for i in range(1, depth + 1):
+        to_visit[i] = []
     
-    # Cache to store fetched pages
-    page_cache = {}
-    
-    # Queue for BFS
-    queue = deque([(start_page, 0)])
-    visited = set()
+    # create a set of visited pages
+    visited = set(start_page)
 
-    with requests.Session() as session:
-        with ThreadPoolExecutor(max_workers=None) as executor:
-            while queue:
-                current_batch = []
-                while queue and len(current_batch) < 10:
-                    current_page, current_depth = queue.popleft()
-                    if current_page not in visited and current_depth < depth:
-                        visited.add(current_page)
-                        current_batch.append((current_page, current_depth))
-                
-                tasks = {executor.submit(get_wikipedia_links, session, page): (page, current_depth) for page, current_depth in current_batch}
-                for future in as_completed(tasks):
-                    page, current_depth = tasks[future]
-                    try:
-                        links = future.result()
-                        page_cache[page] = links
-                        
-                        if not links:
-                            continue
-                        
-                        # Check if the page name contains any substring from the blacklist
-                        if is_blacklisted(page, blacklist_substrings):
-                            continue
-                        
-                        # Add the page to the graph
-                        G.add_node(page)
-                        
-                        # Add links to the graph
-                        for link in links:
-                            if is_blacklisted(link, blacklist_substrings):
-                                continue
-                            G.add_edge(page, link)
-                            if link not in visited:
-                                queue.append((link, current_depth + 1))
-                    except Exception as exc:
-                        print(f'Error fetching links for {page}: {exc}')
-    
-    if verbosity >= 1:
-        print('')
-        print('-'*50, flush=True)
-        print('First Graph built', flush=True)
-        print('Number of nodes:', G.number_of_nodes(), 'Number of edges:', G.number_of_edges(), flush=True)
-        print('')
-   
-    return G
-
-from threading import Lock
-
-def get_wikipedia_links(session, title):
-    """Fetches the links for a given Wikipedia page title using the Wikipedia API."""
-    url = f"https://en.wikipedia.org/w/api.php"
-    params = {
-        'action': 'query',
-        'format': 'json',
-        'prop': 'links',
-        'titles': title,
-        'pllimit': 'max'  # Get maximum number of links
-    }
-    response = session.get(url, params=params)
-    data = response.json()
-    pages = data['query']['pages']
-    links = []
-
-    for page_id in pages:
-        if 'links' in pages[page_id]:
-            links.extend([link['title'] for link in pages[page_id]['links']])
-
-    return links
-
-def add_edges_to_graph(graph, title, links, lock):
-    """Adds edges to the graph for existing nodes in a thread-safe manner."""
-    with lock:
-        for link in links:
-            if link in graph.nodes and not graph.has_edge(title, link):
-                graph.add_edge(title, link)
-
-def finish_graph(graph):
-    """Fetches links from each page in the graph and adds missing edges among existing nodes."""
-    # Extract the page titles from the graph nodes
-    page_titles = list(graph.nodes)
-    
-    # Use a dictionary to hold the links for each page
+    # create a dictionary to store the links and categories
     links_dict = {}
+    categories_dict = {}
     
-    # Use a session for connection pooling
-    session = requests.Session()
+    for i in range(depth):
+
+        to_visit_at_depth = to_visit[i]
+
+        for current_page in to_visit_at_depth:
+
+            current_page = to_visit_at_depth.pop(0)
+            
+            links, categories = fetch_links_api(current_page)
+
+            links_dict[current_page] = links
+            categories_dict[current_page] = categories
+
+            for link in links:
+
+                # check if the link is in the graph
+                if link not in G:
+                    G.add_node(link)
+
+                # add an edge between the page and the link
+                G.add_edge(current_page, link)
+
+                if link not in visited:
+                    to_visit[i + 1].append(link)
+
+                # add the page to the visited set
+                visited.add(current_page)
+
+    print('Initial graph built.')
+    print('Number of nodes:', G.number_of_nodes(), 'Number of edges:', G.number_of_edges())
+    print('Number of categories:', len(categories_dict))
+    print('')
+
+    return G, links_dict, categories_dict
+
+
+def complete_graph(G, links_dict, min_links=15):
+
+    # List all the nodes in the graph
+    nodes = list(G.nodes)
+
+    def process_node(node):
+        # Check if the node is in the links dictionary
+        if node not in links_dict:
+            # Fetch the links for the node
+            links = fetch_links_api(node, get_categories=False)
+            # Add the links to the links dictionary
+            links_dict[node] = links
+
+    # Use ThreadPoolExecutor to multithread the processing of nodes
+    with concurrent.futures.ThreadPoolExecutor(max_workers=None) as executor:
+        executor.map(process_node, nodes)
+
+    for node in nodes:
+
+        added_links = []
+
+        # get the links for the node
+        if node in links_dict:
+            links = links_dict[node]
+
+        else:
+            links = fetch_links_api(node, get_categories=False)
+
+        # for link in links
+        for link in links:
+
+            # check if the link is in the graph but the edge is not
+            if link in G and not G.has_edge(node, link):
+
+                # add the edge
+                G.add_edge(node, link)
+
+
+                # add the link to the added links
+                added_links.append(link)
+
+    # remove nodes that have less than min_links
+    nodes_to_remove = [node for node in G.nodes if G.degree(node) < min_links]
+
+    for node in nodes_to_remove:
+        G.remove_node(node)
+
+    print('Graph completed with new links between already present nodes.')
+    print('Number of nodes:', G.number_of_nodes(), 'Number of edges:', G.number_of_edges())
+
+    return G, links_dict
+
+def build_graph(start_page, depth, verbosity=0, display=False):
+
+    folder_path = f'graphs/{start_page}_(Depth: {depth})'
+    # create a new folder for the graph
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+    graph_path = folder_path + '/graph.gexf' # Change this to the path you want to save the graph to
+    links_path = folder_path + '/links.pkl' # Change this to the path you want to save the links to
+    categories_path = folder_path + '/categories.pkl' # Change this to the path you want to save the categories to
+
+    try: 
+        # open graph 
+        completed_graph = nx.read_gexf(graph_path)
+        
+        # load pickled links and categories
+        with open(links_path, 'rb') as f:
+            links_dict = pkl.load(f)
+
+        with open(categories_path, 'rb') as f:
+            categories_dict = pkl.load(f)
+
+        print('Graph found. Loading graph, links and categories.')
+        print('Number of nodes:', completed_graph.number_of_nodes(), 'Number of edges:', completed_graph.number_of_edges())
+    except:
+
+        print('Graph not found. Building a new graph.')
+        # Build the initial graph
+        graph, links_dict, categories_dict = build_wikipedia_graph(start_page, depth)
+
+        # Complete the graph
+        completed_graph, links_dict = complete_graph(graph, links_dict)
+
+        nx.write_gexf(completed_graph, graph_path)
+
+        # dump with pickle the links and categories
+        with open(categories_path, 'wb') as f:
+            pkl.dump(categories_dict, f)
+        
+        with open(links_path, 'wb') as f:
+            pkl.dump(links_dict, f)
     
-    # Fetch links in parallel with increased workers
-    with ThreadPoolExecutor(max_workers=None) as executor:  # Increase the number of workers for more parallelism
-        future_to_title = {executor.submit(get_wikipedia_links, session, title): title for title in page_titles}
-        for future in as_completed(future_to_title):
-            title = future_to_title[future]
-            try:
-                links = future.result()
-                links_dict[title] = links
-            except Exception as exc:
-                print(f'Error fetching links for {title}: {exc}')
+    if display:
+        # Draw the graph
+        plt.figure(figsize=(12, 12))
+        nx.draw(completed_graph, with_labels=True, font_size=8, node_size=100)
+        plt.show()
 
-    print('Links fetched', flush=True)
-    
-    # Add missing edges among existing nodes in parallel
-    lock = Lock()
-    with ThreadPoolExecutor(max_workers=None) as executor:
-        futures = [executor.submit(add_edges_to_graph, graph, title, links, lock) for title, links in links_dict.items()]
-        for future in as_completed(futures):
-            future.result()    
-    return graph
-
-
-def build_graph_and_categories(start_page, depth, min_edges=35, min_nodes_in_cat=15, verbosity=2):
-    # Build the initial graph
-    graph = build_wikipedia_graph(start_page, depth, verbosity)
-
-    # Finish the graph by fetching links and adding missing edges
-    if verbosity >= 1:
-        print('-'*50, flush=True)
-        print('Finishing graph by adding edges between already existing nodes...', flush=True)
-    graph = finish_graph(graph)
-    if verbosity >= 1:
-        print('')
-        print('Graph finished', flush=True)
-        print('Number of nodes:', graph.number_of_nodes(), 'Number of edges:', graph.number_of_edges(), flush=True)
-        print('')
-
-        if verbosity >= 2:
-            # Print the 10 nodes with the highest degree
-            print('Top 10 nodes by degree:')
-            sorted_nodes = sorted(graph.degree, key=lambda x: x[1], reverse=True)
-            for node, degree in sorted_nodes[:10]:
-                print(f'{node}: {degree} edges')
-            print('')
-
-    if verbosity >= 1:
-        print('-'*50, flush=True)
-        print(f'Removing nodes with degree <= {min_edges}...', flush=True)
-    # remove nodes with degree <= 2
-    nodes_to_remove = [node for node, degree in dict(graph.degree).items() if degree <= min_edges]
-    graph.remove_nodes_from(nodes_to_remove)
-    if verbosity >= 1:
-        print('Final number of nodes:', graph.number_of_nodes(), 'Number of edges:', graph.number_of_edges(), flush=True)
-        print('')
-
-
-    # Categorize the graph
-    if verbosity >= 1:
-        print('-'*50, flush=True)
-        print('Building categories...', flush=True)
-    category_dict = categorize_graph(graph)
-
-    # remove categories with less than 10 nodes
-    categories_to_remove = [category for category, nodes in category_dict.items() if len(nodes) <= min_nodes_in_cat]
-    for category in categories_to_remove:
-        del category_dict[category]
-
-    if verbosity >= 1:
-        print('Categories built', flush=True)
-        print('Number of categories:', len(category_dict), flush=True)
-        print('')
-        if verbosity >= 2:
-            # print the 10 categories with the most pages and the number of pages in each
-            print('Top 10 categories by number of pages:')
-            sorted_categories = sorted(category_dict.items(), key=lambda x: len(x[1]), reverse=True)
-            for category, pages in sorted_categories[:10]:
-                print(f'{category}: {len(pages)} pages')
-            print('')
-    
-    return graph, category_dict
+    return completed_graph, links_dict, categories_dict
