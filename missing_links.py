@@ -53,10 +53,11 @@ def find_missing_links(graph, similarity_matrix, cluster_labels, weak_threshold,
         similarity_matrix = np.triu(similarity_matrix, k=1)
 
         # mask nodes with high similarity scores using the strong threshold
-        strong_indices = np.where(similarity_matrix < strong_threshold)
+        strong_indices = np.where(similarity_matrix > strong_threshold)
 
         # save the links that are not in the graph
         for i, j in zip(strong_indices[0], strong_indices[1]):
+            
             if adj_matrix[i, j] == 1:
                 continue
             
@@ -67,7 +68,6 @@ def find_missing_links(graph, similarity_matrix, cluster_labels, weak_threshold,
                 pass
             
             else:
-                print(f'Adding missing link between {node_i} and {node_j}, similarity score: {similarity_matrix[i, j]}')
                 missing_links[(node_i, node_j)] = similarity_matrix[i, j]
 
     # order the missing links by similarity score
@@ -75,8 +75,7 @@ def find_missing_links(graph, similarity_matrix, cluster_labels, weak_threshold,
 
     return missing_links
 
-def print_missing_links(missing_links, cluster_labels, start_node, n=10):
-    
+def print_missing_links(missing_links, n=10):
 
     print(f'Top {n} missing links:')
     for i, (link, score) in enumerate(missing_links.items()):
