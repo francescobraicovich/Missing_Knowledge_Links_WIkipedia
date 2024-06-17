@@ -1,7 +1,8 @@
 import networkx as nx
 import numpy as np
 
-def find_missing_links(graph, similarity_matrix, cluster_labels, threshold, specific_cluster=None, specific_node=None):
+def find_missing_links(graph, similarity_matrix, cluster_labels, weak_threshold, 
+                       strong_threshold, specific_cluster=None, specific_node=None):
 
     if specific_node is not None:
         # find the cluster of the specific node
@@ -45,15 +46,37 @@ def find_missing_links(graph, similarity_matrix, cluster_labels, threshold, spec
                     similarity_score = similarity_matrix[index_i, index_j]
 
                     # check if the similarity score is below the threshold
-                    if similarity_score >= threshold and adj_matrix[index_i, index_j] == 0:
+                    if similarity_score >= weak_threshold and adj_matrix[index_i, index_j] == 0:
                         missing_links[(node_i, node_j)] = similarity_score
+
+        # take the upper triangular part of the similarity matrix to avoid duplicates
+        similarity_matrix = np.triu(similarity_matrix, k=1)
+
+        # mask nodes with high similarity scores using the strong threshold
+        strong_indices = np.where(similarity_matrix < strong_threshold)
+
+        # save the links that are not in the graph
+        for i, j in zip(strong_indices[0], strong_indices[1]):
+            if adj_matrix[i, j] == 1:
+                continue
+            
+            node_i = node_names[i]
+            node_j = node_names[j]
+
+            if (node_i, node_j) in missing_links or (node_j, node_i) in missing_links:
+                pass
+            
+            else:
+                print(f'Adding missing link between {node_i} and {node_j}, similarity score: {similarity_matrix[i, j]}')
+                missing_links[(node_i, node_j)] = similarity_matrix[i, j]
 
     # order the missing links by similarity score
     missing_links = dict(sorted(missing_links.items(), key=lambda x: x[1], reverse=True))
 
     return missing_links
 
-def print_missing_links(missing_links, n=10):
+def print_missing_links(missing_links, cluster_labels, start_node, n=10):
+    
 
     print(f'Top {n} missing links:')
     for i, (link, score) in enumerate(missing_links.items()):
