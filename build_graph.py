@@ -78,11 +78,16 @@ def fetch_links_api(page_title, get_categories=True):
     # create a mask
     link_mask = np.zeros(len(link_titles), dtype=bool)
 
+    # iterate over the blacklist substrings
+    for substring in substring_to_remove_links:
+        current_mask = np.char.find(link_titles, substring) != -1
+        link_mask |= current_mask
+
     # Create a 2D array where each row corresponds to a link and each column to a substring check
-    contains_substring = np.array([np.char.find(link_titles, substring) != -1 for substring in substring_to_remove_links])
+    #contains_substring = np.array([np.char.find(link_titles, substring) != -1 for substring in substring_to_remove_links])
 
     # Combine the results across all substrings to create a final mask
-    link_mask = np.any(contains_substring, axis=0)
+    #link_mask = np.any(contains_substring, axis=0)
 
     # Filter the array using the combined mask
     filtered_links_array = link_titles[~link_mask]
@@ -98,11 +103,19 @@ def fetch_links_api(page_title, get_categories=True):
     # remove 'Category:' from the category titles
     category_titles = np.char.replace(category_titles, 'Category:', '')
 
+    # create a mask
+    category_mask = np.zeros(len(category_titles), dtype=bool)
+
+    # iterate over the blacklist substrings
+    for substring in substring_to_remove_categories:
+        current_mask = np.char.find(category_titles, substring) != -1
+        category_mask |= current_mask
+
     # create a 2D array where each row corresponds to a category and each column to a substring check
-    contains_substring = np.array([np.char.find(category_titles, substring) != -1 for substring in substring_to_remove_categories])
+    #contains_substring = np.array([np.char.find(category_titles, substring) != -1 for substring in substring_to_remove_categories])
 
     # Combine the results across all substrings to create a final mask
-    category_mask = np.any(contains_substring, axis=0)
+    #category_mask = np.any(contains_substring, axis=0)
 
     # Filter the array using the combined mask
     filtered_categories_array = category_titles[category_mask]
@@ -164,7 +177,7 @@ def build_wikipedia_graph(start_page, depth, verbosity=0):
     return G, links_dict, categories_dict
 
 
-def complete_graph(G, links_dict, min_links=15):
+def complete_graph(G, links_dict, q_min_links=0.3):
 
     # List all the nodes in the graph
     nodes = list(G.nodes)
@@ -201,15 +214,21 @@ def complete_graph(G, links_dict, min_links=15):
                 # add the edge
                 G.add_edge(node, link)
 
-
                 # add the link to the added links
                 added_links.append(link)
+
+    # make an array with the degrees of the nodes
+    degrees = np.array([G.degree(node) for node in G.nodes])
+
+    # compute the minimum number of links as the quantile of the degrees
+    min_links = np.quantile(degrees, q_min_links)
 
     # remove nodes that have less than min_links
     nodes_to_remove = [node for node in G.nodes if G.degree(node) < min_links]
 
     for node in nodes_to_remove:
         G.remove_node(node)
+        pass
 
     print('Graph completed with new links between already present nodes.')
     print('Number of nodes:', G.number_of_nodes(), 'Number of edges:', G.number_of_edges())
