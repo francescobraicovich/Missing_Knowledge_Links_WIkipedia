@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.cluster import AffinityPropagation
 from io import StringIO
 import warnings
+from sklearn.metrics import silhouette_score
 import joblib
 import sys
 
@@ -33,6 +34,11 @@ def cluster(similarity_arr, max_reps=5, damping_start=0.9):
         damping = damping_start + i*damping_step
         clustering, convergence = cluster_with_convergence_bool(similarity_arr, damping)
         if convergence:
+
+            # Print the silhouette score
+            silhouette = silhouette_score(similarity_arr, clustering)
+            print(f'Silhouette Score: {silhouette}')
+            
             return clustering
 
     # If the function did not converge, raise a warning
