@@ -10,87 +10,77 @@ import pickle as pkl
 import concurrent.futures
 
 # Define the blacklist substrings
-substring_to_remove_links = np.array(['Wikipedia', 'Category', 'identifier', 'Help', 'Template', ':', 'Wayback', 'ISBN'])
-substring_to_remove_categories = np.array(['Wiki', 'CS1', 'Articles', 'Pages', 'redirects', 'template', 'disputes', 'ISO'])
+substring_to_remove_links = ['wikipedia', 'category', 'identifier', 'help', 'template', ':', 'wayback', 'isbn', 'jstor']
+substring_to_remove_categories = ['wiki', 'cs1', 'articles', 'pages', 'redirects', 'template', 'disputes', 'iso', 'dmy', 'short', 's1']
 
 wiki_wiki = wikipediaapi.Wikipedia('Missing Knowledge Links', 'en')
 
-def fetch_links(start_pages):
-    # URL-encode each page title
-    encoded_titles = [urllib.parse.quote(title) for title in start_pages]
-    # Join the encoded titles with the pipe character
-    titles = "|".join(encoded_titles)
-    url = f'https://en.wikipedia.org/w/api.php?action=query&titles={titles}&prop=links&pllimit=max&format=json'
-    print('url: ', url)
-    response = requests.get(url)
-    data = response.json()
 
-    print(data)
-    all_links = {}
+def filter_sentences_vectorised(sentences, words_to_filter):
 
-    pages = data['query']['pages']
-    print('Pages: ', pages)
+    if len(sentences) == 0:
+        return sentences
+
+    # convert all sentences to lowercase
+    sentences = np.char.lower(sentences)
+
+    # find the number of spaces in each sentence
+    n_spaces = np.char.count(sentences, ' ')
+
+    # find the maximum number of spaces
+    n_words_to_add = np.max(n_spaces) - n_spaces
+    words_to_add = np.char.multiply(' 0', n_words_to_add)
+
+    # add the words to the sentences
+    equal_length_sentences = np.char.add(sentences, words_to_add)
     
-    for page_id in pages:
-        print('')
-        print('Page ID: ', page_id)
-        page_title = str(pages[page_id]['title'])
-        print('Page Title: ', page_title)
+    # split the sentences into words
+    words_array = np.char.split(equal_length_sentences)
+    
+    # stack the words into a 2D array
+    words_array = np.vstack(words_array)
 
-        if 'links' in pages[page_id]:
-            print('Links: ', pages[page_id]['links'])
+    # create a filter mask
+    filter_mask_2d = np.isin(words_array, words_to_filter)
 
-            # make a dataframe from the links
-            links_df = pd.DataFrame(pages[page_id]['links'])
+    # find the rows that contain at least one word to filter
+    filter_mask = np.any(filter_mask_2d, axis=1)
 
-            print('Links DF: ', links_df)
-            
-            # take the title column into an array
-            links = np.array(links_df['title'], dtype=str)
+    # filter the sentences
+    filtered_sentences = sentences[~filter_mask]
 
-            # create a mask
-            mask = np.zeros(len(links), dtype=bool)
+    return filtered_sentences
 
-            # iterate over the blacklist substrings
-            for substring in blacklist_substrings:
-                current_mask = np.char.find(links, substring) != -1
-                mask |= current_mask
 
-            # Filter the array using the combined mask
-            filtered_array = links[~mask]
+def filter_sentences(sentences, words_to_filter):
+    
+    # convert the sentences to lowercase
+    sentences = np.char.lower(sentences)
 
-            # add the filtered array to the links dictionary
-            print('page_title: ', page_title)
+    # create a mask 
+    mask = np.zeros(len(sentences), dtype=bool)
+        
+    # iterate over the words to filter
+    for word in words_to_filter:
+        current_mask = np.char.find(sentences, word) != -1
+        mask |= current_mask
 
-            all_links[page_title] = filtered_array
+    # filter the sentences
+    filtered_sentences = sentences[~mask]
 
-    return all_links
+    return filtered_sentences
 
 
 def fetch_links_api(page_title, get_categories=True):
 
     page = wiki_wiki.page(page_title)
     links = page.links
-    
-    # make an array of the keys of the links dictionary
-    link_titles = np.array(list(links.keys()), dtype=str)
 
-    # create a mask
-    link_mask = np.zeros(len(link_titles), dtype=bool)
+    # extract the links as an array
+    link_titles = np.array(list(links), dtype=str)
 
-    # iterate over the blacklist substrings
-    for substring in substring_to_remove_links:
-        current_mask = np.char.find(link_titles, substring) != -1
-        link_mask |= current_mask
-
-    # Create a 2D array where each row corresponds to a link and each column to a substring check
-    #contains_substring = np.array([np.char.find(link_titles, substring) != -1 for substring in substring_to_remove_links])
-
-    # Combine the results across all substrings to create a final mask
-    #link_mask = np.any(contains_substring, axis=0)
-
-    # Filter the array using the combined mask
-    filtered_links_array = link_titles[~link_mask]
+    # filter the links
+    filtered_links_array = filter_sentences(link_titles, substring_to_remove_links)
 
     if not get_categories:
         return filtered_links_array
@@ -100,27 +90,13 @@ def fetch_links_api(page_title, get_categories=True):
     # make an array of the keys of the categories dictionary
     category_titles = np.array(list(categories.keys()), dtype=str)
 
-    # remove 'Category:' from the category titles
-    category_titles = np.char.replace(category_titles, 'Category:', '')
+    # remove the first 9 characters of the category titles
+    category_titles = np.char.lstrip(category_titles, 'Category:')
 
-    # create a mask
-    category_mask = np.zeros(len(category_titles), dtype=bool)
+    # filter the categories
+    filtered_categories_set = set(filter_sentences(category_titles, substring_to_remove_categories))
 
-    # iterate over the blacklist substrings
-    for substring in substring_to_remove_categories:
-        current_mask = np.char.find(category_titles, substring) != -1
-        category_mask |= current_mask
-
-    # create a 2D array where each row corresponds to a category and each column to a substring check
-    #contains_substring = np.array([np.char.find(category_titles, substring) != -1 for substring in substring_to_remove_categories])
-
-    # Combine the results across all substrings to create a final mask
-    #category_mask = np.any(contains_substring, axis=0)
-
-    # Filter the array using the combined mask
-    filtered_categories_array = category_titles[category_mask]
-
-    return filtered_links_array, filtered_categories_array
+    return filtered_links_array, filtered_categories_set
 
 
 def build_wikipedia_graph(start_page, depth, verbosity=0):
@@ -177,7 +153,7 @@ def build_wikipedia_graph(start_page, depth, verbosity=0):
     return G, links_dict, categories_dict
 
 
-def complete_graph(G, links_dict, q_min_links=0.3):
+def complete_graph(G, links_dict, categories_dict, min_links=15):
 
     # List all the nodes in the graph
     nodes = list(G.nodes)
@@ -186,9 +162,13 @@ def complete_graph(G, links_dict, q_min_links=0.3):
         # Check if the node is in the links dictionary
         if node not in links_dict:
             # Fetch the links for the node
-            links = fetch_links_api(node, get_categories=False)
+            links, categories = fetch_links_api(node)
+    
             # Add the links to the links dictionary
             links_dict[node] = links
+
+            # Add the categories to the categories dictionary
+            categories_dict[node] = categories
 
     # Use ThreadPoolExecutor to multithread the processing of nodes
     with concurrent.futures.ThreadPoolExecutor(max_workers=None) as executor:
@@ -203,7 +183,8 @@ def complete_graph(G, links_dict, q_min_links=0.3):
             links = links_dict[node]
 
         else:
-            links = fetch_links_api(node, get_categories=False)
+            links, categories = fetch_links_api(node)
+            categories_dict[node] = categories
 
         # for link in links
         for link in links:
@@ -217,12 +198,6 @@ def complete_graph(G, links_dict, q_min_links=0.3):
                 # add the link to the added links
                 added_links.append(link)
 
-    # make an array with the degrees of the nodes
-    degrees = np.array([G.degree(node) for node in G.nodes])
-
-    # compute the minimum number of links as the quantile of the degrees
-    min_links = np.quantile(degrees, q_min_links)
-
     # remove nodes that have less than min_links
     nodes_to_remove = [node for node in G.nodes if G.degree(node) < min_links]
 
@@ -233,7 +208,9 @@ def complete_graph(G, links_dict, q_min_links=0.3):
     print('Graph completed with new links between already present nodes.')
     print('Number of nodes:', G.number_of_nodes(), 'Number of edges:', G.number_of_edges())
 
-    return G, links_dict
+    return G, links_dict, categories_dict
+
+
 
 def build_graph(start_page, depth, verbosity=0, display=False):
 
@@ -266,7 +243,7 @@ def build_graph(start_page, depth, verbosity=0, display=False):
         graph, links_dict, categories_dict = build_wikipedia_graph(start_page, depth)
 
         # Complete the graph
-        completed_graph, links_dict = complete_graph(graph, links_dict)
+        completed_graph, links_dict, categories_dict = complete_graph(graph, links_dict, categories_dict)
 
         nx.write_gexf(completed_graph, graph_path)
 
