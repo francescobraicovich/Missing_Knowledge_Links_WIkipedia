@@ -11,6 +11,8 @@ def build_train_dataset(adjacency_matrix, similarity_matrix, missing_link_matrix
 
     # calculate dataset lengh as the number of missing link candidates * 5
     dataset_length = num_link_candidates * 5
+    dataset_length = max(dataset_length, 5 * 10e4)
+    dataset_length = int(dataset_length)
 
     # initialise the dataframe
     df = pd.DataFrame(columns=['Similarity', 'Common Categories', 'Total Categories', 
@@ -83,9 +85,9 @@ def build_missing_link_dataset(adjacency_matrix, similarity_matrix, missing_link
     num_link_candidates = np.sum(missing_link_matrix > 0)
 
     # initialise the dataframe
-    df = pd.DataFrame(columns=['Similarity', 'Common Categories', 'Total Categories', 
+    df = pd.DataFrame(columns=['node 1', 'node 2', 'Similarity', 'Common Categories', 'Total Categories', 
                                'n_categories node 1', 'n_categories node 2', 
-                               'cluster node 1', 'cluster node 2', 'Link'])
+                               'cluster node 1', 'cluster node 2'])
     
     missing_link_mask = missing_link_matrix > 0
     dataset_length = np.sum(missing_link_mask)
@@ -107,11 +109,15 @@ def build_missing_link_dataset(adjacency_matrix, similarity_matrix, missing_link
     n_categories_node_2 = np.zeros(len(i))
     cluster_node_1 = np.zeros(len(i))
     cluster_node_2 = np.zeros(len(i))
-    link = np.zeros(len(i))
+
+    node1 = []
+    node2 = []
 
     pos = 0
     for pos, nodes in enumerate(node_names_of_indices):
         node_i, node_j = nodes
+        node1.append(node_i)
+        node2.append(node_j)
         categories_i = categories_dict[node_i]
         categories_j = categories_dict[node_j]
         common_categories[pos] = len(categories_i.intersection(categories_j))
@@ -120,7 +126,6 @@ def build_missing_link_dataset(adjacency_matrix, similarity_matrix, missing_link
         n_categories_node_2[pos] = len(categories_j)
         cluster_node_1[pos] = cluster_labels[i[pos]]
         cluster_node_2[pos] = cluster_labels[j[pos]]
-        link[pos] = adjacency_matrix[i[pos], j[pos]]
 
     df['Common Categories'] = common_categories
     df['Total Categories'] = total_categories
@@ -128,7 +133,10 @@ def build_missing_link_dataset(adjacency_matrix, similarity_matrix, missing_link
     df['n_categories node 2'] = n_categories_node_2
     df['cluster node 1'] = cluster_node_1
     df['cluster node 2'] = cluster_node_2
-    df['Link'] = link
+    df['node 1'] = node1
+    df['node 2'] = node2
+
+    print(node1)
 
     return df
 
