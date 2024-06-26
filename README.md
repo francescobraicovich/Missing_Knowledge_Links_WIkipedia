@@ -23,15 +23,18 @@ This Jupyter notebook is the entry point of the project. It integrates all the f
 - Computing pairwise Jaccard similarity.
 - Clustering the graph using DBSCAN.
 - Identifying missing link candidates based on similarity thresholds.
-- Building and training an XGBoost model.
-- Predicting missing links.
+- Building and training an XGBoost model that is able to predict weather two nodes should be connected
+- Predicting missing links:
+    - Missing links in the graph.
+    - Missing links in the same cluster as the starting page
+    - Missing links that include the starting page.
+    - Missing links between nodes that are in different clusters.
 
 ### 2. `build_graph.py`
 
 This script is responsible for constructing a graph where nodes represent Wikipedia pages and edges represent links between them. The graph is built using data from Wikipedia and applying various filtering and processing techniques to ensure the relevance and quality of the links. Given a certain depth and a starting page, the graph is built by including all wikipedia pages that are at distance equal to the depth from the starting page. After this first step, the graph is completed by adding all links between nodes that are already in the graph. This is the lengthiest part of the process given the elevated number of api requests.
 
 #### Dependencies
-The script uses the following libraries:
 - `networkx`: For creating and managing the graph.
 - `requests`: For making HTTP requests to fetch data.
 - `pandas` and `numpy`: For data manipulation and processing.
@@ -71,7 +74,6 @@ The script uses the following libraries:
 This script is responsible for calculating the Jaccard similarity between nodes in a graph. The Jaccard similarity is a measure of similarity between two sets, defined as the size of the intersection divided by the size of the union of the sets. In this context, it is used to measure the similarity between pairs of nodes based on their common neighbors. The `neighbors.py` script provides functions to compute the common neighbors and total neighbors between nodes in a graph, and then uses these values to calculate the Jaccard similarity coefficient. The adjacency matrix of the graph is processed to determine the common neighbors, which is then used along with the total number of neighbors to compute the Jaccard similarity. This measure helps identify nodes that are likely to be connected based on their shared connections with other nodes.
 
 #### Dependencies
-The script relies on the following libraries:
 - `numpy`: For numerical operations and array manipulations.
 - `scipy.sparse`: For handling sparse matrices, which are efficient for storing and processing large adjacency matrices.
 - `threadpoolctl`: For controlling the number of threads used in computations, optimizing performance.
@@ -92,21 +94,44 @@ The script relies on the following libraries:
 
 #### Functions
 
-    - `dbscan_from_similarity. This function performs DBSCAN clustering based on a similarity matrix. It normalizes the similarity matrix, converts it to a distance matrix, and applies HDBSCAN with a range of `cluster_selection_epsilon` values to find the best clustering solution. The best solution is determined based on the silhouette score, ensuring the clusters are well-defined and distinct. Moreover the function avoids having noise clusters exessively big by reclustering noise into new clusters when this happens.
+- `dbscan_from_similarity. This function performs DBSCAN clustering based on a similarity matrix. It normalizes the similarity matrix, converts it to a distance matrix, and applies HDBSCAN with a range of `cluster_selection_epsilon` values to find the best clustering solution. The best solution is determined based on the silhouette score, ensuring the clusters are well-defined and distinct. Moreover the function avoids having noise clusters exessively big by reclustering noise into new clusters when this happens.
 
-### 5. `build_dataset.py`
-This script is responsible for creating the training and missing links datasets. Important functions are:
-- `create_train_dataset`: Constructs a training dataset with features and labels.
-- `create_missing_links_dataset`: Creates a dataset of missing link candidates.
+### 5. `missing_links.py`
+This code identifies potential missing links in a given graph based on a similarity matrix, cluster labels and two similarity thresholds. It helps to predict which connections could exist but are not currently present in the graph. Each couple of nodes that is in the same cluster and has a similarity score higher than the weak similarity threshold is saved as a missing link candidate. The same for couple of nodes that have similarity score higher than the strong threshold, even if not in the same cluster.
 
-### 6. `tune_model.py`
+#### Dependencies
+- `networkx`
+- `numpy`
+- `concurrent.futures`
+
+#### Functions
+
+- `find_missing_link_candidates`: This function identifies potential missing links within a graph by analyzing the similarity scores between nodes and their cluster labels. It uses given thresholds to determine which links are missing and generates a dictionary and matrix indicating these potential links. The function can also focus on specific clusters or nodes if specified.
+
+- `print_missing_links_dict`: This function prints the top N missing links and their similarity scores from a dictionary of potential missing links. By default, it prints the top 10 missing links, providing a quick overview of the most significant missing connections in the graph.
+
+### 6. `build_dataset.py`
+This code constructs datasets from a given graph computing various features for each pair of nodes. The features included in the dataset are: node degrees, common neighbors, total neighbors, similarity scores, common categories, total categories, number of categories for each node, and cluster labels. These features are obtained through parallel processing, using thread pools to efficiently compute the required attributes for each node pair. The datasets created are either for training (`train`) or for predicting missing links (`missing links`). The `train` dataset includes randomly chosen couples of nodes making sure they do not include the missing link candidates, whilst the `missing links` dataset is made up of the missing link candidates. The datasets are then fed to an XGBoost model that predicts weather two nodes should be linked or not.
+
+## Requirements
+- `pandas`
+- `numpy`
+- `tqdm`
+- `concurrent.futures` (part of the standard library)
+
+## Functions
+
+- `filter_sentences`: This function filters out sentences that contain any of the specified words from a list. It converts all sentences to lowercase, creates a mask for sentences containing the unwanted words, and returns a set of filtered sentences. This is to remove unwanted categories such as: 'Short aritcles' or 'Articles that need verification'.
+
+- `find_indices_of_links`: This function finds the indices of links based on the given DataFrame type and a missing link matrix. It returns the row and column indices of the links for either 'missing links' or 'train dataset'.
+
+- `process_node_pair`: This function processes a pair of nodes to compute various features such as degrees, common neighbors, and categories. It filters categories using a predefined blacklist and returns a dictionary with the computed features for the node pair.
+
+- `build_dataset_multi_thread`: This function builds a dataset by extracting node names, finding link indices, and computing features for each pair of nodes using a thread pool for parallel processing. It constructs a DataFrame with the computed features and returns it along with an updated filtered categories dictionary.
+
+### 7. `tune_model.py`
 This module contains functions to train and tune an XGBoost model to predict missing links. Key functions include:
-- `train_xgboost_model`: Trains the XGBoost model on the training dataset.
-- `tune_model`: Tunes the hyperparameters of the XGBoost model.
-
-### 7. `missing_links.py`
-This file uses the trained XGBoost model to predict missing links between Wikipedia pages. Main functions are:
-- `predict_missing_links`: Predicts whether there should be a link between pairs of nodes based on the model.
+- `tune_model`: Tunes the hyperparameters of a ML model.
 
 ### 8. `requirements.txt`
 This file lists all the dependencies required for the project to run. The main dependencies are:
@@ -117,11 +142,3 @@ This file lists all the dependencies required for the project to run. The main d
 - NumPy
 - Matplotlib
 - Wikipedia-API
-
-## Installation and Setup
-To set up the project, follow these steps:
-
-1. Clone the repository to your local machine.
-2. Create a virtual environment:
-   ```bash
-   python -m venv venv
