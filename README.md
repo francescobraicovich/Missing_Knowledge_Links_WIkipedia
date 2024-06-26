@@ -78,7 +78,7 @@ The script relies on the following libraries:
 
 #### Functions
     - `get_common_neighbors(adj_matrix)`: This function computes the number of common neighbors between nodes in a given adjacency matrix. It converts the adjacency matrix into sparse matrix formats (`csr_matrix` and `csc_matrix`) for efficient computation. The product of these matrices gives the number of common neighbors between each pair of nodes, which is then converted back to a dense matrix.
-    
+
     - `get_total_neighbors(adj_matrix, common_neighbors)`: This function calculates the total number of neighbors for each node. It sums the columns of the adjacency matrix to get the number of neighbors for each node and then computes the outer sum to get the total neighbors between pairs of nodes. The common neighbors and direct connections are subtracted to get the total neighbors matrix, which is adjusted to avoid division by zero.
 
     - `get_jaccard_coefficient(common_neighbors, total_neighbors)`: This function calculates the Jaccard coefficient using the common neighbors and total neighbors matrices. The Jaccard coefficient is computed as the ratio of the number of common neighbors to the total number of neighbors minus the direct connection.
