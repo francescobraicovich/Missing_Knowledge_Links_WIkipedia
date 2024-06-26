@@ -55,14 +55,14 @@ def filter_sentences_vectorised(sentences, words_to_filter):
 def filter_sentences(sentences, words_to_filter):
     
     # convert the sentences to lowercase
-    sentences = np.char.lower(sentences)
+    sentences_lower = np.char.lower(sentences)
 
     # create a mask 
-    mask = np.zeros(len(sentences), dtype=bool)
+    mask = np.zeros(len(sentences_lower), dtype=bool)
         
     # iterate over the words to filter
     for word in words_to_filter:
-        current_mask = np.char.find(sentences, word) != -1
+        current_mask = np.char.find(sentences_lower, word) != -1
         mask |= current_mask
 
     # filter the sentences
@@ -71,7 +71,7 @@ def filter_sentences(sentences, words_to_filter):
     return filtered_sentences
 
 
-def fetch_links_api(page_title, get_categories=True):
+def fetch_links_api(page_title, filter_links=True, filter_categories = True, get_categories=True, retry=0):
 
     page = wiki_wiki.page(page_title)
     links = page.links
@@ -79,8 +79,12 @@ def fetch_links_api(page_title, get_categories=True):
     # extract the links as an array
     link_titles = np.array(list(links), dtype=str)
 
-    # filter the links
-    filtered_links_array = filter_sentences(link_titles, substring_to_remove_links)
+    
+    if filter_links:
+        # filter the links
+        filtered_links_array = filter_sentences(link_titles, substring_to_remove_links)
+    else:
+        filtered_links_array = link_titles
 
     if not get_categories:
         return filtered_links_array
@@ -93,8 +97,11 @@ def fetch_links_api(page_title, get_categories=True):
     # remove the first 9 characters of the category titles
     category_titles = np.char.lstrip(category_titles, 'Category:')
 
-    # filter the categories
-    filtered_categories_set = set(filter_sentences(category_titles, substring_to_remove_categories))
+    if filter_categories:
+        # filter the categories
+        filtered_categories_set = filter_sentences(category_titles, substring_to_remove_categories)
+    else:
+        filtered_categories_set = category_titles
 
     return filtered_links_array, filtered_categories_set
 
@@ -158,11 +165,13 @@ def complete_graph(G, links_dict, categories_dict, min_links=15):
     # List all the nodes in the graph
     nodes = list(G.nodes)
 
+    print('First round: Processing nodes to add missing links between existing nodes.')
+
     def process_node(node):
         # Check if the node is in the links dictionary
         if node not in links_dict:
             # Fetch the links for the node
-            links, categories = fetch_links_api(node)
+            links, categories = fetch_links_api(node, filter_links=False, filter_categories=False)
     
             # Add the links to the links dictionary
             links_dict[node] = links
@@ -170,33 +179,31 @@ def complete_graph(G, links_dict, categories_dict, min_links=15):
             # Add the categories to the categories dictionary
             categories_dict[node] = categories
 
+
     # Use ThreadPoolExecutor to multithread the processing of nodes
     with concurrent.futures.ThreadPoolExecutor(max_workers=None) as executor:
         executor.map(process_node, nodes)
 
     for node in nodes:
 
-        added_links = []
-
-        # get the links for the node
-        if node in links_dict:
-            links = links_dict[node]
-
-        else:
-            links, categories = fetch_links_api(node)
-            categories_dict[node] = categories
-
+        # Get the links of the node
+        links = links_dict[node]
+        
         # for link in links
         for link in links:
 
             # check if the link is in the graph but the edge is not
             if link in G and not G.has_edge(node, link):
-
                 # add the edge
                 G.add_edge(node, link)
 
-                # add the link to the added links
-                added_links.append(link)
+    # find the degree of each node
+    degrees = G.degree
+
+    # find the 0.33 quantile of the degrees
+    quantile_033 = np.quantile(list(dict(degrees).values()), 0.33)
+
+    min_links = int(min(min_links, quantile_033))   
 
     # remove nodes that have less than min_links
     nodes_to_remove = [node for node in G.nodes if G.degree(node) < min_links]
@@ -205,8 +212,8 @@ def complete_graph(G, links_dict, categories_dict, min_links=15):
         G.remove_node(node)
         pass
 
-    print('Graph completed with new links between already present nodes.')
-    print('Number of nodes:', G.number_of_nodes(), 'Number of edges:', G.number_of_edges())
+    print('Graph completed with new links between already existing nodes.')
+    print('Number of nodes:', G.number_of_nodes(), ', Number of edges:', G.number_of_edges(), ', Number of categories:', len(categories_dict))
 
     return G, links_dict, categories_dict
 
@@ -235,13 +242,15 @@ def build_graph(start_page, depth, verbosity=0, display=False):
             categories_dict = pkl.load(f)
 
         print('Graph found. Loading graph, links and categories.')
-        print('Number of nodes:', completed_graph.number_of_nodes(), 'Number of edges:', completed_graph.number_of_edges())
+        print('Number of nodes:', completed_graph.number_of_nodes(), ', Number of edges:', completed_graph.number_of_edges())
     except:
 
         print('Graph not found. Building a new graph.')
         # Build the initial graph
         graph, links_dict, categories_dict = build_wikipedia_graph(start_page, depth)
 
+
+        print('Graph built. Completing the graph with missing links between existing nodes.')
         # Complete the graph
         completed_graph, links_dict, categories_dict = complete_graph(graph, links_dict, categories_dict)
 
