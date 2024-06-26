@@ -5,6 +5,19 @@ from sklearn.metrics import silhouette_score
 
 
 def dbscan_from_similarity(similarity_matrix, noise_threshold=None, subcluster_noise=True, verbose=True):
+    """
+    Perform DBSCAN clustering based on a similarity matrix.
+
+    Parameters:
+    similarity_matrix (numpy.ndarray): The similarity matrix.
+    noise_threshold (int, optional): The threshold for noise cluster size. Defaults to None.
+    subcluster_noise (bool, optional): Whether to subcluster the noise cluster. Defaults to True.
+    verbose (bool, optional): Whether to print verbose output. Defaults to True.
+
+    Returns:
+    numpy.ndarray: The cluster labels.
+    """
+
     # find the maximum similarity score and normalise the similarity matrix
     max_similarity = np.max(similarity_matrix)
     similarity_matrix = similarity_matrix / max_similarity
@@ -87,6 +100,5 @@ def dbscan_from_similarity(similarity_matrix, noise_threshold=None, subcluster_n
         print('-'*50)
         print(f'Final Silhouette Score: {silhouette}')
         print('-'*50)
-
     
     return best_labels
