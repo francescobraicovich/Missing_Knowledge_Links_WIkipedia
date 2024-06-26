@@ -17,7 +17,7 @@ The project consists of several key components, each defined in different files.
 
 ## Examples of Missing Links:
 - `start_page`: **Pythagorean theorem**
-- 'depth': 2
+- `depth`: 2 (1 is too low, 3 requires too much time)
 - Top 5 missing links:
 
 - Top 5 missing links in the same cluster as the **Pythagorean theorem**:
