@@ -11,7 +11,17 @@ columns = ['node_1', 'node_2', 'degree_node_1', 'degree_node_2', 'common_neighbo
            'cluster_node_1', 'cluster_node_2', 'link']
 
 def filter_sentences(sentences, words_to_filter):
-    
+    """
+    Filters out sentences that contain any of the specified words.
+
+    Args:
+        sentences (numpy.ndarray): An array of sentences to filter.
+        words_to_filter (list): A list of words to filter out.
+
+    Returns:
+        set: A set of filtered sentences.
+
+    """
     # convert the sentences to lowercase
     sentences_lower = np.char.lower(sentences)
 
@@ -29,33 +39,44 @@ def filter_sentences(sentences, words_to_filter):
     return set(filtered_sentences)
 
 def find_indices_of_links(df_type, missing_link_matrix):
+    """
+    Find indices of links based on the given DataFrame type and missing link matrix.
+
+    Parameters:
+    - df_type (str): The type of DataFrame. Can be 'missing links' or 'train dataset'.
+    - missing_link_matrix (numpy.ndarray): The matrix representing missing links.
+
+    Returns:
+    - i (numpy.ndarray): The row indices of the links.
+    - j (numpy.ndarray): The column indices of the links.
+    """
 
     if df_type == 'missing links':
-        # take the indices of the missing links
+        # take the indices of the missing links
         missing_link_mask = missing_link_matrix > 0
         i, j = np.where(missing_link_mask)
         return i, j
     
-    # if instead we are building the train dataset
-    # find the number of missing link candidates
+    # if instead we are building the train dataset
+    # find the number of missing link candidates
     num_link_candidates = np.sum(missing_link_matrix > 0)
 
-    # calculate dataset lengh as the number of missing link candidates * 5
+    # calculate dataset length as the number of missing link candidates * 5
     dataset_length = int(max(num_link_candidates * 5, 10e5))
 
-    # set the seed
+    # set the seed
     np.random.seed(1)
 
-    # sample dataset_lenght random indices i, j
+    # sample dataset_length random indices i, j
     n = np.shape(missing_link_matrix)[0]
     i = np.random.choice(n, dataset_length)
     j = np.random.choice(n, dataset_length)
 
-    # iterate until the random indices do not correspond to missing links
+    # iterate until the random indices do not correspond to missing links
     while True:
         mask = missing_link_matrix[i, j] > 0
         
-        # remove the indices that correspond to missing links
+        # remove the indices that correspond to missing links
         i = i[~mask]
         j = j[~mask]
 
@@ -70,7 +91,28 @@ def find_indices_of_links(df_type, missing_link_matrix):
 def build_dataset(adjacency_matrix, similarity_matrix, missing_link_matrix, 
                         common_neighbors_matrix, total_neighbors_matrix, 
                         graph, cluster_labels, categories_dict, df_type, filtered_categories_dict=None):
+    """
+    Build a dataset based on the given matrices and graph. The dataset will contain features such as the similarity score,
+    the number of common neighbors, the total number of neighbors, the number of common categories, the total number of categories,
+    the number of categories of each node, the cluster of each node, the degree of each node, and the link between the nodes.
 
+    Parameters:
+    - adjacency_matrix (numpy.ndarray): The adjacency matrix representing the links between nodes.
+    - similarity_matrix (numpy.ndarray): The similarity matrix representing the similarity scores between nodes.
+    - missing_link_matrix (numpy.ndarray): The matrix representing the missing links between nodes.
+    - common_neighbors_matrix (numpy.ndarray): The matrix representing the number of common neighbors between nodes.
+    - total_neighbors_matrix (numpy.ndarray): The matrix representing the total number of neighbors for each node pair.
+    - graph (networkx.Graph): The graph representing the nodes and their connections.
+    - cluster_labels (numpy.ndarray): The cluster labels for each node.
+    - categories_dict (dict): A dictionary mapping each node to its categories.
+    - df_type (str): The type of dataset being built.
+    - filtered_categories_dict (dict, optional): A dictionary storing the filtered categories for each node to avoid recomputation. Defaults to None.
+
+    Returns:
+    - df (pandas.DataFrame): The built dataset as a pandas DataFrame.
+    - filtered_categories_dict (dict): The updated filtered categories dictionary.
+
+    """
     # extract node names
     node_names = list(graph.nodes)
     
@@ -138,6 +180,28 @@ def build_dataset(adjacency_matrix, similarity_matrix, missing_link_matrix,
     return df, filtered_categories_dict
 
 def process_node_pair(idx, nodes, filtered_categories_dict, categories_dict, substring_to_remove_categories, cluster_labels, i, j, common_neighbors_matrix, total_neighbors_matrix, degrees, adjacency_matrix):
+    """
+    Process a pair of nodes and calculate various metrics based on their categories, cluster labels, and adjacency matrix.
+
+    Args:
+        idx (int): The index of the node pair.
+        nodes (tuple): A tuple containing the two nodes.
+        filtered_categories_dict (dict): A dictionary containing pre-filtered categories for each node.
+        categories_dict (dict): A dictionary containing all categories for each node.
+        substring_to_remove_categories (str): A substring to be removed from the categories.
+        cluster_labels (list): A list of cluster labels for each node.
+        i (list): A list of indices for the first node in each pair.
+        j (list): A list of indices for the second node in each pair.
+        common_neighbors_matrix (numpy.ndarray): A matrix containing the number of common neighbors between nodes.
+        total_neighbors_matrix (numpy.ndarray): A matrix containing the total number of neighbors for each node.
+        degrees (numpy.ndarray): An array containing the degrees of each node.
+        adjacency_matrix (numpy.ndarray): An adjacency matrix representing the links between nodes.
+
+    Returns:
+        dict: A dictionary containing various metrics calculated for the node pair, including the index, node names,
+              common categories, total categories, number of categories for each node, cluster labels for each node,
+              number of common neighbors, total number of neighbors, degrees of each node, and the link between the nodes.
+    """
     node_i, node_j = nodes
     
     if node_i not in filtered_categories_dict:
