@@ -63,19 +63,19 @@ This script is responsible for constructing a graph where nodes represent Wikipe
     - `wiki_wiki`: Initializes a Wikipedia API object for fetching page data.
 
 3. **Filter Functions**:
-    - `filter_sentences_vectorised(sentences, words_to_filter)`: Filters out sentences that contain any of the specified words. This function processes the sentences to ensure they are of equal length, splits them into words, and removes sentences containing the specified words.
-    - `filter_sentences(sentences, words_to_filter)`: A non-vectorized version of the filtering function for comparison.
+    - `filter_sentences_vectorised`: Filters out sentences that contain any of the specified words. This function processes the sentences to ensure they are of equal length, splits them into words, and removes sentences containing the specified words.
+    - `filter_sentences`: A non-vectorized version of the filtering function for comparison.
 
 4. **Graph Construction**:
     - The script includes a series of functions to build and filter the graph:
-    - `fetch_wikipedia_page(title)`: Fetches a Wikipedia page and its links.
-    - `build_graph(pages)`: Main function to build the graph. It initializes a NetworkX graph, fetches pages and their links, applies filters, and adds nodes and edges to the graph.
-    - `filter_links(links)`: Applies the link filter to remove irrelevant links.
-    - `filter_categories(categories)`: Applies the category filter to remove irrelevant categories.
+    - `fetch_wikipedia_page`: Fetches a Wikipedia page and its links.
+    - `build_graph`: Main function to build the graph. It initializes a NetworkX graph, fetches pages and their links, applies filters, and adds nodes and edges to the graph.
+    - `filter_links`: Applies the link filter to remove irrelevant links.
+    - `filter_categories`: Applies the category filter to remove irrelevant categories.
 
 5. **Serialization and Deserialization**:
-    - `save_graph(graph, filename)`: Saves the graph to a file using pickle. This step makes it possible to reuse the graph without constructing it again a second time.
-    - `load_graph(filename)`: Loads a graph from a file using pickle (only if it was saved before).
+    - `save_graph`: Saves the graph to a file using pickle. This step makes it possible to reuse the graph without constructing it again a second time.
+    - `load_graph`: Loads a graph from a file using pickle (only if it was saved before).
 
 6. **Parallel Processing**:
     - Utilizes `concurrent.futures` for fetching Wikipedia pages in parallel, speeding up the graph construction process.
@@ -104,7 +104,7 @@ The script relies on the following libraries:
 
 #### Functions
 
-- `dbscan_from_similarity. This function performs DBSCAN clustering based on a similarity matrix. It normalizes the similarity matrix, converts it to a distance matrix, and applies HDBSCAN with a range of `cluster_selection_epsilon` values to find the best clustering solution. The best solution is determined based on the silhouette score, ensuring the clusters are well-defined and distinct. Moreover the function avoids having noise clusters exessively big by reclustering noise into new clusters when this happens.
+- `dbscan_from_similarity`. This function performs DBSCAN clustering based on a similarity matrix. It normalizes the similarity matrix, converts it to a distance matrix, and applies HDBSCAN with a range of `cluster_selection_epsilon` values to find the best clustering solution. The best solution is determined based on the silhouette score, ensuring the clusters are well-defined and distinct. Moreover the function avoids having noise clusters exessively big by reclustering noise into new clusters when this happens.
 
 ### 5. `missing_links.py`
 This code identifies potential missing links in a given graph based on a similarity matrix, cluster labels and two similarity thresholds. It helps to predict which connections could exist but are not currently present in the graph. Each couple of nodes that is in the same cluster and has a similarity score higher than the weak similarity threshold is saved as a missing link candidate. The same for couple of nodes that have similarity score higher than the strong threshold, even if not in the same cluster.
