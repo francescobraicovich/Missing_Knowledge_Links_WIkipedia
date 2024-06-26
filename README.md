@@ -55,10 +55,10 @@ The script uses the following libraries:
 
 4. **Graph Construction**:
     - The script includes a series of functions to build and filter the graph:
-      - `fetch_wikipedia_page(title)`: Fetches a Wikipedia page and its links.
-      - `build_graph(pages)`: Main function to build the graph. It initializes a NetworkX graph, fetches pages and their links, applies filters, and adds nodes and edges to the graph.
-      - `filter_links(links)`: Applies the link filter to remove irrelevant links.
-      - `filter_categories(categories)`: Applies the category filter to remove irrelevant categories.
+    - `fetch_wikipedia_page(title)`: Fetches a Wikipedia page and its links.
+    - `build_graph(pages)`: Main function to build the graph. It initializes a NetworkX graph, fetches pages and their links, applies filters, and adds nodes and edges to the graph.
+    - `filter_links(links)`: Applies the link filter to remove irrelevant links.
+    - `filter_categories(categories)`: Applies the category filter to remove irrelevant categories.
 
 5. **Serialization and Deserialization**:
     - `save_graph(graph, filename)`: Saves the graph to a file using pickle. This step makes it possible to reuse the graph without constructing it again a second time.
@@ -77,11 +77,9 @@ The script relies on the following libraries:
 - `threadpoolctl`: For controlling the number of threads used in computations, optimizing performance.
 
 #### Functions
-    - `get_common_neighbors(adj_matrix)`: This function computes the number of common neighbors between nodes in a given adjacency matrix. It converts the adjacency matrix into sparse matrix formats (`csr_matrix` and `csc_matrix`) for efficient computation. The product of these matrices gives the number of common neighbors between each pair of nodes, which is then converted back to a dense matrix.
-
-    - `get_total_neighbors(adj_matrix, common_neighbors)`: This function calculates the total number of neighbors for each node. It sums the columns of the adjacency matrix to get the number of neighbors for each node and then computes the outer sum to get the total neighbors between pairs of nodes. The common neighbors and direct connections are subtracted to get the total neighbors matrix, which is adjusted to avoid division by zero.
-
-    - `get_jaccard_coefficient(common_neighbors, total_neighbors)`: This function calculates the Jaccard coefficient using the common neighbors and total neighbors matrices. The Jaccard coefficient is computed as the ratio of the number of common neighbors to the total number of neighbors minus the direct connection.
+- `get_common_neighbors(adj_matrix)`: This function computes the number of common neighbors between nodes in a given adjacency matrix. It converts the adjacency matrix into sparse matrix formats (`csr_matrix` and `csc_matrix`) for efficient computation. The product of these matrices gives the number of common neighbors between each pair of nodes, which is then converted back to a dense matrix.
+- `get_total_neighbors(adj_matrix, common_neighbors)`: This function calculates the total number of neighbors for each node. It sums the columns of the adjacency matrix to get the number of neighbors for each node and then computes the outer sum to get the total neighbors between pairs of nodes. The common neighbors and direct connections are subtracted to get the total neighbors matrix, which is adjusted to avoid division by zero.
+- `get_jaccard_coefficient(common_neighbors, total_neighbors)`: This function calculates the Jaccard coefficient using the common neighbors and total neighbors matrices. The Jaccard coefficient is computed as the ratio of the number of common neighbors to the total number of neighbors minus the direct connection.
 
 ### 4. `dbscan.py`
 This script is responsible for performing DBSCAN clustering based on a similarity matrix. DBSCAN (Density-Based Spatial Clustering of Applications with Noise) is a clustering algorithm that groups together points that are closely packed together, marking points that are in low-density regions as outliers. The `dbscan.py` script uses the HDBSCAN (Hierarchical Density-Based Spatial Clustering of Applications with Noise) variant, which improves upon DBSCAN by handling varying densities. This script takes a similarity matrix as input, converts it into a distance matrix, and applies the HDBSCAN algorithm to cluster the nodes. It iterates over a range of parameters to find the best clustering solution based on the silhouette score, a measure of how similar an object is to its own cluster compared to other clusters.
