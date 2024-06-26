@@ -303,7 +303,7 @@ def build_graph(start_page, depth, verbosity=0, display=False):
         tuple: A tuple containing the built graph, links dictionary, and categories dictionary.
     """
     # Define the folder path to save the graph, links, and categories
-    folder_path = f'graphs/{start_page}_(Depth: {depth}'
+    folder_path = f'graphs/{start_page}_(Depth: {depth})'
     # create a new folder for the graph if it doesn't exist
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
