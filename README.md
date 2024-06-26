@@ -1,7 +1,7 @@
-# Missing Knowledg Links WIkipedia
+# Missing Knowledge Links WIkipedia
 
 ## Overview
-The Missing Links Analysis project aims to identify missing links between Wikipedia pages that should logically be connected. The process involves building a graph of Wikipedia pages, computing similarity scores, clustering the graph, and using machine learning to predict potential missing links.
+This Missing Links Analysis project aims to identify missing links between Wikipedia pages that should logically be connected. The process involves building a graph of Wikipedia pages, computing similarity scores, clustering the graph, and using machine learning to predict potential missing links.
 
 ## Project Structure
 The project consists of several key components, each defined in different files. Here's an overview of the files and their purposes:
@@ -14,6 +14,16 @@ The project consists of several key components, each defined in different files.
 6. `tune_model.py`: Contains functions to train and tune an XGBoost model.
 7. `missing_links.py`: Uses the trained model to predict missing links.
 8. `requirements.txt`: Lists all dependencies required for the project.
+
+## Examples of Missing Links:
+- `start_page`: **Pythagorean theorem**
+- 'depth': 2
+- Top 5 missing links:
+
+- Top 5 missing links in the same cluster as the **Pythagorean theorem**:
+
+- Top 5 missing links between nodes in different clusters:
+  
 
 ## Detailed Description of Each File
 
