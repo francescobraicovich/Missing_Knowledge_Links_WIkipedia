@@ -28,13 +28,16 @@ def get_wikipedia_categories(session, title):
 def add_categories_to_dict(category_dict, lock, title, categories):
     """Adds categories to the dictionary in a thread-safe manner."""
     with lock:
+        categories_to_add = []
+        
         for category in categories:
             cleaned_category = category.replace('Category:', '')
+            print(cleaned_category, flush=True)
 
             if not any(substring in cleaned_category.lower() for substring in blacklist_substrings):
-                if cleaned_category not in category_dict:
-                    category_dict[cleaned_category] = []
-                category_dict[cleaned_category].append(title)
+                categories_to_add.append(cleaned_category)
+        
+        category_dict[title] = categories_to_add
 
 def categorize_graph(graph):
     """Categorizes Wikipedia pages from a given nx graph."""
