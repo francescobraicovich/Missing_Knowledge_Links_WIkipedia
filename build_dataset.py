@@ -134,74 +134,7 @@ def build_dataset(adjacency_matrix, similarity_matrix, missing_link_matrix,
     return df, filtered_categories_dict
 
 
-def build_missing_link_dataset(adjacency_matrix, similarity_matrix, missing_link_matrix, common_neighbors_matrix, total_neighbors_matrix, graph, cluster_labels, categories_dict):
-    
-    # extract node names
-    node_names = list(graph.nodes)
 
-    # find the number of missing link candidates
-    num_link_candidates = np.sum(missing_link_matrix > 0)
-
-    # initialise the dataframe
-    df = pd.DataFrame(columns=['node 1', 'node 2', 'Common Neighbors', 'Total Neighbors','Similarity', 'Common Categories', 'Total Categories', 
-                               'n_categories node 1', 'n_categories node 2', 
-                               'cluster node 1', 'cluster node 2'])
-    
-    missing_link_mask = missing_link_matrix > 0
-
-    # take the indices of the missing links
-    i, j = np.where(missing_link_mask)
-
-    # insert the similarity scores
-    df['Similarity'] = similarity_matrix[i, j]
-
-    # get the node names of the missing links
-    indices = zip(i, j)
-    node_names_of_indices = [(node_names[node_i], node_names[node_j]) for node_i, node_j in indices]
-    
-    # initialise the features
-    common_categories = np.zeros(len(i))
-    total_categories = np.zeros(len(i))
-    n_categories_node_1 = np.zeros(len(i))
-    n_categories_node_2 = np.zeros(len(i))
-    cluster_node_1 = np.zeros(len(i))
-    cluster_node_2 = np.zeros(len(i))
-    common_neighbors = np.zeros(len(i))
-    total_neighbors = np.zeros(len(i))
-
-    node1 = []
-    node2 = []
-
-    idx = 0
-    for idx, nodes in enumerate(node_names_of_indices):
-        node_i, node_j = nodes
-        node1.append(node_i)
-        node2.append(node_j)
-        categories_i = categories_dict[node_i]
-        categories_j = categories_dict[node_j]
-        common_categories[idx] = len(categories_i.intersection(categories_j))
-        total_categories[idx] = len(categories_i.union(categories_j))
-        n_categories_node_1[idx] = len(categories_i)
-        n_categories_node_2[idx] = len(categories_j)
-        cluster_node_1[idx] = cluster_labels[i[idx]]
-        cluster_node_2[idx] = cluster_labels[j[idx]]
-        common_neighbors[idx] = common_neighbors_matrix[i[idx], j[idx]]
-        total_neighbors[idx] = total_neighbors_matrix[i[idx], j[idx]]
-
-    df['Common Categories'] = common_categories
-    df['Total Categories'] = total_categories
-    df['n_categories node 1'] = n_categories_node_1
-    df['n_categories node 2'] = n_categories_node_2
-    df['cluster node 1'] = cluster_node_1
-    df['cluster node 2'] = cluster_node_2
-    df['node 1'] = node1
-    df['node 2'] = node2
-    df['Common Neighbors'] = common_neighbors
-    df['Total Neighbors'] = total_neighbors
-
-    print(node1)
-
-    return df
 
 
     
