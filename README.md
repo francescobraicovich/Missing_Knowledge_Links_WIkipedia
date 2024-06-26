@@ -9,7 +9,7 @@ The project consists of several key components, each defined in different files.
 1. `Missing_links_analysis.ipynb`: The main Jupyter notebook that orchestrates the entire analysis process.
 2. `build_graph.py`: Contains functions to build a graph of Wikipedia pages.
 3. `neighbors.py`: Provides functionality to compute Jaccard similarity between pairs of nodes.
-4. `dbscan.py`: Implements the DBSCAN clustering algorithm on the graph.
+4. `dbscan.py`: Implements the HDBSCAN clustering algorithm on the graph.
 5. `build_dataset.py`: Constructs the training and missing links datasets.
 6. `tune_model.py`: Contains functions to train and tune an XGBoost model.
 7. `missing_links.py`: Uses the trained model to predict missing links.
