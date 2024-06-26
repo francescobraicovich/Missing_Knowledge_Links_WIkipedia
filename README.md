@@ -28,7 +28,7 @@ This Jupyter notebook is the entry point of the project. It integrates all the f
 
 ### 2. `build_graph.py`
 
-This script is responsible for constructing a graph where nodes represent Wikipedia pages and edges represent links between them. The graph is built using data from Wikipedia and applying various filtering and processing techniques to ensure the relevance and quality of the links.
+This script is responsible for constructing a graph where nodes represent Wikipedia pages and edges represent links between them. The graph is built using data from Wikipedia and applying various filtering and processing techniques to ensure the relevance and quality of the links. Given a certain depth and a starting page, the graph is built by including all wikipedia pages that are at distance equal to the depth from the starting page. After this first step, the graph is completed by adding all links between nodes that are already in the graph. This is the lengthiest part of the process given the elevated number of api requests.
 
 #### Dependencies
 The script uses the following libraries:
@@ -61,38 +61,11 @@ The script uses the following libraries:
       - `filter_categories(categories)`: Applies the category filter to remove irrelevant categories.
 
 5. **Serialization and Deserialization**:
-    - `save_graph(graph, filename)`: Saves the graph to a file using pickle.
-    - `load_graph(filename)`: Loads a graph from a file using pickle.
+    - `save_graph(graph, filename)`: Saves the graph to a file using pickle. This step makes it possible to reuse the graph without constructing it again a second time.
+    - `load_graph(filename)`: Loads a graph from a file using pickle (only if it was saved before).
 
 6. **Parallel Processing**:
     - Utilizes `concurrent.futures` for fetching Wikipedia pages in parallel, speeding up the graph construction process.
-
-#### How it Works
-
-1. **Initialization**:
-   - The script starts by initializing the Wikipedia API and defining blacklists for filtering irrelevant links and categories.
-
-2. **Fetching and Filtering Data**:
-   - `fetch_wikipedia_page` is used to retrieve a Wikipedia page and extract its links. The links are then filtered using `filter_links` to remove any that contain blacklisted substrings.
-   - Categories are similarly filtered using `filter_categories`.
-
-3. **Building the Graph**:
-   - The `build_graph` function constructs the graph by iterating through a list of pages, fetching their data, filtering links and categories, and adding the relevant nodes and edges to the NetworkX graph.
-
-4. **Optimization and Parallel Processing**:
-   - To handle large volumes of data efficiently, the script uses `concurrent.futures` to fetch page data in parallel, reducing the overall time required to build the graph.
-
-5. **Saving and Loading the Graph**:
-   - Once the graph is built, it can be saved to a file using `save_graph` for later use. The graph can also be loaded from a file using `load_graph`, enabling reuse without rebuilding.
-
-#### Reasoning Behind the Code
-
-- **Filtering**: By removing irrelevant links and categories, the script ensures that the graph only contains meaningful connections, improving the quality of subsequent analyses.
-- **Parallel Processing**: Leveraging parallel processing significantly speeds up data fetching, making the script more efficient and scalable.
-- **Modularity**: Functions are designed to be modular, allowing for easy testing, maintenance, and reuse in different parts of the project.
-
-Overall, this script lays the foundation for building a high-quality graph of Wikipedia pages, which is essential for identifying missing links and conducting further analyses.
-
 
 ### 3. `neighbors.py`
 This module provides the functionality to compute the Jaccard similarity between pairs of nodes in the graph. Key functions include:
