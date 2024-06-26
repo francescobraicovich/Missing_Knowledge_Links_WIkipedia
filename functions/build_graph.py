@@ -17,7 +17,17 @@ wiki_wiki = wikipediaapi.Wikipedia('Missing Knowledge Links', 'en')
 
 
 def filter_sentences_vectorised(sentences, words_to_filter):
+    """
+    Filters out sentences that contain any of the specified words to filter.
 
+    Args:
+        sentences (numpy.ndarray): An array of sentences to filter.
+        words_to_filter (numpy.ndarray): An array of words to filter.
+
+    Returns:
+        numpy.ndarray: An array of filtered sentences.
+
+    """
     if len(sentences) == 0:
         return sentences
 
@@ -53,7 +63,16 @@ def filter_sentences_vectorised(sentences, words_to_filter):
 
 
 def filter_sentences(sentences, words_to_filter):
-    
+    """
+    Filters out sentences that contain any of the specified words to filter.
+
+    Args:
+        sentences (numpy.ndarray): An array of sentences to filter.
+        words_to_filter (list): A list of words to filter.
+
+    Returns:
+        numpy.ndarray: An array of filtered sentences.
+    """
     # convert the sentences to lowercase
     sentences_lower = np.char.lower(sentences)
 
@@ -71,34 +90,45 @@ def filter_sentences(sentences, words_to_filter):
     return filtered_sentences
 
 
-def fetch_links_api(page_title, filter_links=True, filter_categories = True, get_categories=True, retry=0):
+def fetch_links_api(page_title, filter_links=True, filter_categories=True, get_categories=True, retry=0):
+    """
+    Fetches the links and categories of a Wikipedia page.
 
+    Args:
+        page_title (str): The title of the Wikipedia page.
+        filter_links (bool, optional): Whether to filter the links. Defaults to True.
+        filter_categories (bool, optional): Whether to filter the categories. Defaults to True.
+        get_categories (bool, optional): Whether to retrieve the categories. Defaults to True.
+        retry (int, optional): The number of times to retry the API call in case of failure. Defaults to 0.
+
+    Returns:
+        tuple: A tuple containing the filtered links array and the filtered categories set.
+    """
     page = wiki_wiki.page(page_title)
     links = page.links
 
     # extract the links as an array
     link_titles = np.array(list(links), dtype=str)
 
-    
     if filter_links:
-        # filter the links
+        # filter the links
         filtered_links_array = filter_sentences(link_titles, substring_to_remove_links)
     else:
         filtered_links_array = link_titles
 
     if not get_categories:
         return filtered_links_array
-    
+
     categories = page.categories
 
-    # make an array of the keys of the categories dictionary
+    # make an array of the keys of the categories dictionary
     category_titles = np.array(list(categories.keys()), dtype=str)
 
-    # remove the first 9 characters of the category titles
+    # remove the first 9 characters of the category titles
     category_titles = np.char.lstrip(category_titles, 'Category:')
 
     if filter_categories:
-        # filter the categories
+        # filter the categories
         filtered_categories_set = filter_sentences(category_titles, substring_to_remove_categories)
     else:
         filtered_categories_set = category_titles
@@ -107,60 +137,96 @@ def fetch_links_api(page_title, filter_links=True, filter_categories = True, get
 
 
 def build_wikipedia_graph(start_page, depth, verbosity=0):
-    """Build an undirected graph of Wikipedia pages up to a certain depth."""
+    """
+    Builds a Wikipedia graph starting from a given page.
+
+    Args:
+        start_page (str): The title of the starting Wikipedia page.
+        depth (int): The depth of the graph.
+        verbosity (int, optional): The level of verbosity. Defaults to 0.
+
+    Returns:
+        tuple: A tuple containing the built graph, links dictionary, and categories dictionary.
+    """
+    # Create an empty graph
     G = nx.Graph()
+    # Add the starting page as a node in the graph
     G.add_node(start_page)
 
+    # Create a dictionary to store the pages to visit at each depth
     to_visit = {0: [start_page]}
 
-    # create a list in the dictionary for each depth
+    # Create a list in the dictionary for each depth
     for i in range(1, depth + 1):
         to_visit[i] = []
     
-    # create a set of visited pages
+    # Create a set to store the visited pages
     visited = set(start_page)
 
-    # create a dictionary to store the links and categories
+    # Create dictionaries to store the links and categories
     links_dict = {}
     categories_dict = {}
     
+    # Iterate over the depths
     for i in range(depth):
 
+        # Get the pages to visit at the current depth
         to_visit_at_depth = to_visit[i]
 
-        for current_page in to_visit_at_depth:
-
+        # Iterate over the pages to visit at the current depth
+        while to_visit_at_depth:
+            # Get the current page
             current_page = to_visit_at_depth.pop(0)
             
+            # Fetch the links and categories for the current page
             links, categories = fetch_links_api(current_page)
 
+            # Add the links and categories to the dictionaries
             links_dict[current_page] = links
             categories_dict[current_page] = categories
 
+            # Iterate over the links
             for link in links:
 
-                # check if the link is in the graph
+                # Check if the link is not already in the graph
                 if link not in G:
+                    # Add the link as a node in the graph
                     G.add_node(link)
 
-                # add an edge between the page and the link
+                # Add an edge between the current page and the link
                 G.add_edge(current_page, link)
 
+                # Check if the link has not been visited
                 if link not in visited:
+                    # Add the link to the pages to visit at the next depth
                     to_visit[i + 1].append(link)
 
-                # add the page to the visited set
+                # Add the current page to the visited set
                 visited.add(current_page)
 
-    print('Initial graph built.')
-    print('Number of nodes:', G.number_of_nodes(), 'Number of edges:', G.number_of_edges())
-    print('Number of categories:', len(categories_dict))
-    print('')
+    # Print the graph information if verbosity is greater than 0
+    if verbosity > 0:
+        print('Initial graph built.')
+        print('Number of nodes:', G.number_of_nodes(), 'Number of edges:', G.number_of_edges())
+        print('Number of categories:', len(categories_dict))
+        print('')
 
     return G, links_dict, categories_dict
 
 
 def complete_graph(G, links_dict, categories_dict, min_links=15):
+    """
+    Completes the graph by adding missing links between existing nodes.
+
+    Args:
+        G (networkx.Graph): The graph to complete.
+        links_dict (dict): A dictionary containing the links for each node.
+        categories_dict (dict): A dictionary containing the categories for each node.
+        min_links (int, optional): The minimum number of links a node must have to be kept in the graph. Defaults to 15.
+
+    Returns:
+        tuple: A tuple containing the completed graph, updated links dictionary, and updated categories dictionary.
+    """
 
     # List all the nodes in the graph
     nodes = list(G.nodes)
@@ -168,6 +234,12 @@ def complete_graph(G, links_dict, categories_dict, min_links=15):
     print('First round: Processing nodes to add missing links between existing nodes.')
 
     def process_node(node):
+        """
+        Fetches the links and categories for a given node and updates the links and categories dictionaries.
+
+        Args:
+            node (str): The node to process.
+        """
         # Check if the node is in the links dictionary
         if node not in links_dict:
             # Fetch the links for the node
@@ -220,43 +292,55 @@ def complete_graph(G, links_dict, categories_dict, min_links=15):
 
 
 def build_graph(start_page, depth, verbosity=0, display=False):
+    """
+    Builds a Wikipedia graph starting from a given page.
 
-    folder_path = f'graphs/{start_page}_(Depth: {depth})'
-    # create a new folder for the graph
+    Args:
+        start_page (str): The title of the starting Wikipedia page.
+        depth (int): The depth of the graph.
+        verbosity (int, optional): The level of verbosity. Defaults to 0.
+        display (bool, optional): Whether to display the graph. Defaults to False.
+
+    Returns:
+        tuple: A tuple containing the built graph, links dictionary, and categories dictionary.
+    """
+    # Define the folder path to save the graph, links, and categories
+    folder_path = f'graphs/{start_page}_(Depth: {depth}'
+    # create a new folder for the graph if it doesn't exist
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
 
-    graph_path = folder_path + '/graph.gexf' # Change this to the path you want to save the graph to
-    links_path = folder_path + '/links.pkl' # Change this to the path you want to save the links to
-    categories_path = folder_path + '/categories.pkl' # Change this to the path you want to save the categories to
+    graph_path = folder_path + '/graph.gexf' # Change this to the path you want to save the graph to
+    links_path = folder_path + '/links.pkl' # Change this to the path you want to save the links to
+    categories_path = folder_path + '/categories.pkl' # Change this to the path you want to save the categories to
 
     try: 
-        # open graph 
+        # Try to open the existing graph 
         completed_graph = nx.read_gexf(graph_path)
         
-        # load pickled links and categories
+        # Load pickled links and categories
         with open(links_path, 'rb') as f:
             links_dict = pkl.load(f)
 
         with open(categories_path, 'rb') as f:
             categories_dict = pkl.load(f)
 
-        print('Graph found. Loading graph, links and categories.')
+        print('Graph found. Loading graph, links, and categories.')
         print('Number of nodes:', completed_graph.number_of_nodes(), ', Number of edges:', completed_graph.number_of_edges())
     except:
-
+        # If the graph doesn't exist, build a new one
         print('Graph not found. Building a new graph.')
         # Build the initial graph
         graph, links_dict, categories_dict = build_wikipedia_graph(start_page, depth)
-
 
         print('Graph built. Completing the graph with missing links between existing nodes.')
         # Complete the graph
         completed_graph, links_dict, categories_dict = complete_graph(graph, links_dict, categories_dict)
 
+        # Save the completed graph as a GEXF file
         nx.write_gexf(completed_graph, graph_path)
 
-        # dump with pickle the links and categories
+        # Save the links and categories as pickled files
         with open(categories_path, 'wb') as f:
             pkl.dump(categories_dict, f)
         
