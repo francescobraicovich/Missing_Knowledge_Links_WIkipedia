@@ -41,7 +41,7 @@ The script uses the following libraries:
 - `os` and `pickle`: For file operations and data serialization.
 - `concurrent.futures`: For parallel processing.
 
-#### Key Components
+#### Key features
 
 1. **Blacklists for Filtering**:
     - `substring_to_remove_links` and `substring_to_remove_categories`: Lists of substrings used to filter out irrelevant links and categories from Wikipedia pages.
@@ -76,20 +76,25 @@ The script relies on the following libraries:
 - `scipy.sparse`: For handling sparse matrices, which are efficient for storing and processing large adjacency matrices.
 - `threadpoolctl`: For controlling the number of threads used in computations, optimizing performance.
 
-#### Key Components
-
-1. **Common Neighbors Calculation**:
+#### Functions
     - `get_common_neighbors(adj_matrix)`: This function computes the number of common neighbors between nodes in a given adjacency matrix. It converts the adjacency matrix into sparse matrix formats (`csr_matrix` and `csc_matrix`) for efficient computation. The product of these matrices gives the number of common neighbors between each pair of nodes, which is then converted back to a dense matrix.
-
-2. **Total Neighbors Calculation**:
+    
     - `get_total_neighbors(adj_matrix, common_neighbors)`: This function calculates the total number of neighbors for each node. It sums the columns of the adjacency matrix to get the number of neighbors for each node and then computes the outer sum to get the total neighbors between pairs of nodes. The common neighbors and direct connections are subtracted to get the total neighbors matrix, which is adjusted to avoid division by zero.
 
-3. **Jaccard Coefficient Calculation**:
     - `get_jaccard_coefficient(common_neighbors, total_neighbors)`: This function calculates the Jaccard coefficient using the common neighbors and total neighbors matrices. The Jaccard coefficient is computed as the ratio of the number of common neighbors to the total number of neighbors minus the direct connection.
 
 ### 4. `dbscan.py`
-This file implements the DBSCAN clustering algorithm to group similar nodes together. Main functions are:
-- `perform_dbscan`: Applies DBSCAN clustering on the graph based on the Jaccard similarity scores.
+This script is responsible for performing DBSCAN clustering based on a similarity matrix. DBSCAN (Density-Based Spatial Clustering of Applications with Noise) is a clustering algorithm that groups together points that are closely packed together, marking points that are in low-density regions as outliers. The `dbscan.py` script uses the HDBSCAN (Hierarchical Density-Based Spatial Clustering of Applications with Noise) variant, which improves upon DBSCAN by handling varying densities. This script takes a similarity matrix as input, converts it into a distance matrix, and applies the HDBSCAN algorithm to cluster the nodes. It iterates over a range of parameters to find the best clustering solution based on the silhouette score, a measure of how similar an object is to its own cluster compared to other clusters.
+
+#### Dependencies
+The script relies on the following libraries:
+- `numpy`: For numerical operations and array manipulations.
+- `sklearn.cluster.HDBSCAN`: For performing the HDBSCAN clustering algorithm.
+- `sklearn.metrics`: For calculating the silhouette score to evaluate clustering quality.
+
+#### Functions
+
+    - `dbscan_from_similarity. This function performs DBSCAN clustering based on a similarity matrix. It normalizes the similarity matrix, converts it to a distance matrix, and applies HDBSCAN with a range of `cluster_selection_epsilon` values to find the best clustering solution. The best solution is determined based on the silhouette score, ensuring the clusters are well-defined and distinct. Moreover the function avoids having noise clusters exessively big by reclustering noise into new clusters when this happens.
 
 ### 5. `build_dataset.py`
 This script is responsible for creating the training and missing links datasets. Important functions are:
