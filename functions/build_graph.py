@@ -136,7 +136,7 @@ def fetch_links_api(page_title, filter_links=True, filter_categories=True, get_c
     return filtered_links_array, filtered_categories_set
 
 
-def build_wikipedia_graph(start_page, depth, verbosity=0):
+def build_wikipedia_graph(start_page, depth, verbosity=1):
     """
     Builds a Wikipedia graph starting from a given page.
 
@@ -230,8 +230,6 @@ def complete_graph(G, links_dict, categories_dict, min_links=15):
 
     # List all the nodes in the graph
     nodes = list(G.nodes)
-
-    print('First round: Processing nodes to add missing links between existing nodes.')
 
     def process_node(node):
         """
