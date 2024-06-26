@@ -68,8 +68,24 @@ The script uses the following libraries:
     - Utilizes `concurrent.futures` for fetching Wikipedia pages in parallel, speeding up the graph construction process.
 
 ### 3. `neighbors.py`
-This module provides the functionality to compute the Jaccard similarity between pairs of nodes in the graph. Key functions include:
-- `compute_jaccard_similarity`: Computes the Jaccard similarity score for all pairs of nodes in the graph.
+This script is responsible for calculating the Jaccard similarity between nodes in a graph. The Jaccard similarity is a measure of similarity between two sets, defined as the size of the intersection divided by the size of the union of the sets. In this context, it is used to measure the similarity between pairs of nodes based on their common neighbors. The `neighbors.py` script provides functions to compute the common neighbors and total neighbors between nodes in a graph, and then uses these values to calculate the Jaccard similarity coefficient. The adjacency matrix of the graph is processed to determine the common neighbors, which is then used along with the total number of neighbors to compute the Jaccard similarity. This measure helps identify nodes that are likely to be connected based on their shared connections with other nodes.
+
+#### Dependencies
+The script relies on the following libraries:
+- `numpy`: For numerical operations and array manipulations.
+- `scipy.sparse`: For handling sparse matrices, which are efficient for storing and processing large adjacency matrices.
+- `threadpoolctl`: For controlling the number of threads used in computations, optimizing performance.
+
+#### Key Components
+
+1. **Common Neighbors Calculation**:
+    - `get_common_neighbors(adj_matrix)`: This function computes the number of common neighbors between nodes in a given adjacency matrix. It converts the adjacency matrix into sparse matrix formats (`csr_matrix` and `csc_matrix`) for efficient computation. The product of these matrices gives the number of common neighbors between each pair of nodes, which is then converted back to a dense matrix.
+
+2. **Total Neighbors Calculation**:
+    - `get_total_neighbors(adj_matrix, common_neighbors)`: This function calculates the total number of neighbors for each node. It sums the columns of the adjacency matrix to get the number of neighbors for each node and then computes the outer sum to get the total neighbors between pairs of nodes. The common neighbors and direct connections are subtracted to get the total neighbors matrix, which is adjusted to avoid division by zero.
+
+3. **Jaccard Coefficient Calculation**:
+    - `get_jaccard_coefficient(common_neighbors, total_neighbors)`: This function calculates the Jaccard coefficient using the common neighbors and total neighbors matrices. The Jaccard coefficient is computed as the ratio of the number of common neighbors to the total number of neighbors minus the direct connection.
 
 ### 4. `dbscan.py`
 This file implements the DBSCAN clustering algorithm to group similar nodes together. Main functions are:
