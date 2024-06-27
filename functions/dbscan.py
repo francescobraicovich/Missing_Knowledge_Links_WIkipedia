@@ -27,8 +27,6 @@ def dbscan_from_similarity(similarity_matrix, noise_threshold=None, subcluster_n
 
     # find min and max cluster sizes
     n = np.shape(similarity_matrix)[0]
-    min_cluster_size = 5
-    max_cluster_size = 200
 
     # define a set of values for cluster_selection_epsilon
     cluster_selection_epsilon_values = np.linspace(0.01, 0.9, 30)
@@ -42,7 +40,7 @@ def dbscan_from_similarity(similarity_matrix, noise_threshold=None, subcluster_n
         
         # run HDBSCAN
         dbscan = HDBSCAN(metric='precomputed', cluster_selection_epsilon=eps, min_samples=None, 
-                         cluster_selection_method='eom', n_jobs=-1, max_cluster_size=150)
+                         cluster_selection_method='eom', n_jobs=-1, max_cluster_size=300)
         
         labels = dbscan.fit_predict(distance_matrix)
         
