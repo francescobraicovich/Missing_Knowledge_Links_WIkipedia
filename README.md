@@ -123,13 +123,13 @@ This code identifies potential missing links in a given graph based on a similar
 ### 6. `build_dataset.py`
 This code constructs datasets from a given graph computing various features for each pair of nodes. The features included in the dataset are: node degrees, common neighbors, total neighbors, similarity scores, common categories, total categories, number of categories for each node, and cluster labels. These features are obtained through parallel processing, using thread pools to efficiently compute the required attributes for each node pair. The datasets created are either for training (`train`) or for predicting missing links (`missing links`). The `train` dataset includes randomly chosen couples of nodes making sure they do not include the missing link candidates, whilst the `missing links` dataset is made up of the missing link candidates. The datasets are then fed to an XGBoost model that predicts weather two nodes should be linked or not.
 
-## Requirements
+#### Requirements
 - `pandas`
 - `numpy`
 - `tqdm`
 - `concurrent.futures` (part of the standard library)
 
-## Functions
+#### Functions
 
 - `filter_sentences`: This function filters out sentences that contain any of the specified words from a list. It converts all sentences to lowercase, creates a mask for sentences containing the unwanted words, and returns a set of filtered sentences. This is to remove unwanted categories such as: 'Short aritcles' or 'Articles that need verification'.
 
