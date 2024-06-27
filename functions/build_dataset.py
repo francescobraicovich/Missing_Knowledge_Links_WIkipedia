@@ -27,7 +27,7 @@ def filter_sentences(sentences, words_to_filter):
 
     # create a mask 
     mask = np.zeros(len(sentences_lower), dtype=bool)
-        
+
     # iterate over the words to filter
     for word in words_to_filter:
         current_mask = np.char.find(sentences_lower, word) != -1
@@ -92,9 +92,7 @@ def build_dataset(adjacency_matrix, similarity_matrix, missing_link_matrix,
                         common_neighbors_matrix, total_neighbors_matrix, 
                         graph, cluster_labels, categories_dict, df_type, filtered_categories_dict=None):
     """
-    Build a dataset based on the given matrices and graph. The dataset will contain features such as the similarity score,
-    the number of common neighbors, the total number of neighbors, the number of common categories, the total number of categories,
-    the number of categories of each node, the cluster of each node, the degree of each node, and the link between the nodes.
+    Build a dataset based on the given matrices and graph.
 
     Parameters:
     - adjacency_matrix (numpy.ndarray): The adjacency matrix representing the links between nodes.
@@ -106,13 +104,13 @@ def build_dataset(adjacency_matrix, similarity_matrix, missing_link_matrix,
     - cluster_labels (numpy.ndarray): The cluster labels for each node.
     - categories_dict (dict): A dictionary mapping each node to its categories.
     - df_type (str): The type of dataset being built.
-    - filtered_categories_dict (dict, optional): A dictionary storing the filtered categories for each node to avoid recomputation. Defaults to None.
+    - filtered_categories_dict (dict, optional): A dictionary storing the filtered categories for each node to avoid recomputation.
 
     Returns:
-    - df (pandas.DataFrame): The built dataset as a pandas DataFrame.
+    - df (pandas.DataFrame): The built dataset.
     - filtered_categories_dict (dict): The updated filtered categories dictionary.
-
     """
+   
     # extract node names
     node_names = list(graph.nodes)
     

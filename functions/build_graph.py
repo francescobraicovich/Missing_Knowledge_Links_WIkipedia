@@ -254,10 +254,16 @@ def complete_graph(G, links_dict, categories_dict, min_links=15):
     with concurrent.futures.ThreadPoolExecutor(max_workers=None) as executor:
         executor.map(process_node, nodes)
 
-    for node in links_dict.keys():
+    for node in nodes:
 
-        # Get the links of the node
-        links = links_dict[node]
+        try:
+            # Get the links of the node
+            links = links_dict[node]
+        except:
+            # If the node is not in the links dictionary, fetch the links
+            links, categories = fetch_links_api(node, filter_links=False, filter_categories=False)
+            links_dict[node] = links
+            categories_dict[node] = categories
         
         # for link in links
         for link in links:
