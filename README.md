@@ -1,4 +1,4 @@
-# Missing Links Analyzer
+# Wikipedia Missing Knowledge Links
 
 ## Summary
 The Missing Links Analyzer is a Python project designed to identify potential missing links (undiscovered or unacknowledged connections) within a network of Wikipedia pages. It achieves this by building a graph from a specified start page, analyzing page similarities and clustering, and then training a machine learning model to predict and rank these potential missing links.
