@@ -344,5 +344,3 @@ class MissingLinksAnalyzer:
                 logger.error(f"Unexpected error at '{method.__name__}': {e}", exc_info=True)
                 return
         logger.info("Full pipeline completed successfully.")
-
-```
