@@ -108,5 +108,3 @@ if __name__ == "__main__":
         logger.error(f"An unexpected error occurred during pipeline execution: {e}", exc_info=True)
         print(f"\nAn unexpected critical error occurred: {e}. Check logs for details.", file=sys.stderr)
         sys.exit(1)
-
-```
