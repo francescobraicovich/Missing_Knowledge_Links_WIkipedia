@@ -90,38 +90,6 @@ The primary way to run the analysis is via the `run_analysis.py` script located 
     ```
     Replace `path/to/your_custom_settings.toml` with the actual path to your custom configuration file.
 
-### Programmatic Usage (High-Level Example)
-The `MissingLinksAnalyzer` class can also be used programmatically within your own Python scripts:
-```python
-# Ensure the project root is in PYTHONPATH or use appropriate relative imports
-# from src.missing_links_analyzer.analyzer import MissingLinksAnalyzer
-# from src.missing_links_analyzer.config import load_config, AppConfig
-#
-# # Load default configuration
-# # analyzer_default = MissingLinksAnalyzer() 
-# # analyzer_default.run_full_pipeline()
-# # default_results = analyzer_default.final_missing_links_df
-# # if default_results is not None:
-# #    print("Top missing links (default config):")
-# #    print(default_results.head())
-#
-# # Load a custom configuration (if you have one)
-# try:
-#     custom_config_path = "config/settings.toml" # Replace with your custom config path if different
-#     custom_config = load_config(custom_config_path)
-#     analyzer_custom = MissingLinksAnalyzer(config=custom_config)
-#     analyzer_custom.run_full_pipeline()
-#     custom_results = analyzer_custom.final_missing_links_df
-#     if custom_results is not None:
-#         print("\\nTop missing links (custom config):")
-#         print(custom_results.head())
-# except FileNotFoundError:
-#     print(f"Custom config file not found at {custom_config_path}. Skipping programmatic custom run example.")
-# except Exception as e:
-#     print(f"An error occurred during programmatic execution: {e}")
-```
-*(Note: The programmatic example is illustrative. You might need to adjust paths or ensure the `src` directory is correctly recognized by Python's import system, which is handled by `sys.path` manipulation in `scripts/run_analysis.py`)*
-
 ## How to Run Tests
 Unit tests are located in the `tests/` directory and can be run using Python's `unittest` module.
 
@@ -141,11 +109,3 @@ Unit tests are located in the `tests/` directory and can be run using Python's `
     python -m unittest test_utils.py
     ```
 
-## License
-MIT License (Placeholder)
-*(This project is currently provided without a formal license. Users should assume all rights are reserved unless a license file (e.g., LICENSE.md) is added to the repository.)*
-
-## Acknowledgements
-(Acknowledgements to be added if any)
-
-```
