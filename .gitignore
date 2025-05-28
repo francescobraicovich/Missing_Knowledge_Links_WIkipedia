@@ -4,3 +4,7 @@ usr.txt
 .venv
 
 __pycache__
+data/
+*.egg-info/
+build/
+dist/

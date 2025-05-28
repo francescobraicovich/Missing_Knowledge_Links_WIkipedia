@@ -1,0 +1,36 @@
+title = "Missing Links Analyzer Configuration"
+
+[paths]
+graph_output_dir = "data/graphs/"
+dataset_output_dir = "data/datasets/"
+model_output_dir = "data/models/"
+log_file_path = "data/logs/analyzer.log"
+
+[graph_params]
+start_page = "Wikipedia" # Default start page
+depth = 2
+min_links_for_completion = 15 # As used in the original complete_graph function
+
+[similarity_params]
+# Quantiles of existing link similarities to determine actual thresholds
+weak_threshold_quantile = 0.75
+strong_threshold_quantile = 0.95
+
+[clustering_params]
+# Ratio of total nodes to determine noise cluster size for potential reclustering
+noise_threshold_ratio = 0.05
+subcluster_noise_enabled = true
+# HDBSCAN's cluster_selection_epsilon values to try - if empty, dbscan_from_similarity will use its default linspace
+hdbscan_epsilon_values = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9] # Example, can be adjusted or made empty
+
+[model_params]
+test_split_ratio = 0.3
+random_state = 42
+# XGBoost specific parameters (can be expanded)
+xgboost_n_estimators = 100
+xgboost_max_depth = 5
+xgboost_alpha = 0.1
+# scale_pos_weight will be calculated dynamically based on the training data
+
+[logging]
+log_level = "INFO" # e.g., DEBUG, INFO, WARNING, ERROR
