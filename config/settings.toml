@@ -7,7 +7,7 @@ model_output_dir = "data/models/"
 log_file_path = "data/logs/analyzer.log"
 
 [graph_params]
-start_page = "Wikipedia" # Default start page
+start_page = "Eliana La Ferrara" # Default start page
 depth = 2
 min_links_for_completion = 15 # As used in the original complete_graph function
 
