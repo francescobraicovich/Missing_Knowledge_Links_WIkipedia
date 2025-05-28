@@ -32,8 +32,7 @@ The Missing Links Analyzer is a Python project designed to identify potential mi
 ### Steps
 1.  **Clone the Repository:**
     ```bash
-    git clone <repository_url> # Replace <repository_url> with the actual URL
-    cd missing-links-analyzer # Or your repository's root folder name
+    git clone https://github.com/francescobraicovich/wiki-links.git
     ```
 
 2.  **Set Up a Virtual Environment (Recommended):**
