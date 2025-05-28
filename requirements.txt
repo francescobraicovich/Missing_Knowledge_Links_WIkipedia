@@ -3,7 +3,7 @@ numpy
 pandas
 scikit-learn
 xgboost
-wikipediaapi
+wikipedia-api
 requests
 scipy
 tqdm
