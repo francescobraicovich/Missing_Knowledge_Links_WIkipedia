@@ -3,7 +3,7 @@ Command-line interface for running the Missing Links Analysis pipeline.
 
 This script allows users to run the full analysis pipeline, optionally providing
 a custom configuration file. If no custom configuration is specified, the default
-settings (from config/settings.toml via src.missing_links_analyzer.config) are used.
+settings (from /settings.toml via src.missing_links_analyzer.config) are used.
 
 Example usage:
     python scripts/run_analysis.py
@@ -20,6 +20,7 @@ import sys
 try:
     PROJECT_ROOT = Path(__file__).resolve().parent.parent
     sys.path.append(str(PROJECT_ROOT))
+    print(f'Path added to sys.path: {PROJECT_ROOT}', file=sys.stderr)
     
     from src.missing_links_analyzer.analyzer import MissingLinksAnalyzer
     from src.missing_links_analyzer.config import load_config, settings as default_settings, AppConfig
